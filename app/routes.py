@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request
-from .models import Task, tasks
+from .models import Task
 
 main = Blueprint('main', __name__)
 
@@ -9,21 +9,34 @@ def get_main():
 
 @main.route('/tasks', methods=['GET'])
 def get_tasks():
+    tasks = Task.all()
     return jsonify([task.__dict__ for task in tasks]),200
 
 @main.route('/tasks', methods=['POST'])
 def create_task():
     data = request.get_json()
-    task_id = len(tasks) + 1
-    new_task = Task(task_id, data['title'], data['description'])
-    tasks.append(new_task)
+    new_task = Task.create(data['title'], data['description'])
     return jsonify(new_task.__dict__), 201
 
 @main.route('/tasks/<int:task_id>', methods=['GET'])
 def get_task(task_id):
-    task = next((task for task in tasks if task.id == task_id), None)
-
+    task = Task.find(task_id)
     if task:
         return jsonify(task.__dict__), 200
     return jsonify({"Error": "Task not found"}), 404
+
+@main.route('/tasks/<int:task_id>', methods=['PUT'])
+def update_task(task_id):
+    task = Task.find(task_id)
+    if not task:
+        return jsonify({"Error": "Task not found"}), 404
     
+    data = request.get_json()
+    task.title = data['title']
+    task.description = data['description']
+    return jsonify(task.__dict__), 200
+
+@main.route('/tasks/<int:task_id>', methods=['DELETE'])
+def delete_task(task_id):
+    Task.delete(task_id)
+    return jsonify({"message": "Task deleted"}), 204
